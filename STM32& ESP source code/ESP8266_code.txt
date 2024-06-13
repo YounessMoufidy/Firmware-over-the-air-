@@ -1,0 +1,273 @@
+/*Library includes*/
+#include <Arduino.h>
+#include <ESP8266WiFi.h>
+#include <PubSubClient.h>
+#include "string.h"
+#include "HardwareSerial.h"
+#include <Firebase_ESP_Client.h>
+// Provide the token generation process info.
+#include <addons/TokenHelper.h>
+
+// Provide the SD card interfaces setting and mounting
+#include <addons/SDHelper.h>
+
+/*User defined macros*/
+#define WIFI_SSID      "Your WIFI SSID"
+#define WIFI_PASSWORD "Your WIFI PASSWORD"
+#define MQTT_SERVER   "test.mosquitto.org"/*MQTT broker*/
+#define API_KEY "YOUR FIREBASE API KEY"
+#define USER_EMAIL "myemail@gmail.com"
+#define USER_PASSWORD "123456"
+#define STORAGE_BUCKET_ID "Your STORAGE_BUCKET_ID "//You can find it in storage (firebase)
+/*For firebase*/
+FirebaseData fbdo;
+
+FirebaseAuth auth;
+FirebaseConfig config;
+
+bool taskCompleted = false;
+/*functions declarations*/
+void Read64Byte(char*);
+void setup_wifi(void);
+void callBack(char*,byte*,unsigned int );
+void reconnect(void);
+void setup_firebase(void);
+void fcsDownloadCallback(FCS_DownloadStatusInfo);
+/*The packet that stores the data from the bootloader*/
+char packet[74];
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  Serial1.begin(115200);
+  setup_wifi();
+  setup_firebase();
+  client.setServer(MQTT_SERVER,1883);
+  client.setCallback(callBack);
+}
+
+void loop() {
+  firebase_loop();
+  if(!client.connected())
+  {
+    reconnect();
+  }
+  client.loop();
+  //delay(100);
+
+}
+
+
+
+
+/*Functions implementation*/
+void firebase_loop(void)
+{
+  if (Firebase.ready() && !taskCompleted)
+  {
+    taskCompleted = true;
+	  Serial.println("\nDownload file...\n");
+    // The file systems for flash and SD/SDMMC can be changed in FirebaseFS.h.
+    if (!Firebase.Storage.download(&fbdo, STORAGE_BUCKET_ID /* Firebase Storage bucket id */, "CAN_C6_Master_test_parsed.txt" /* path of remote file stored in the bucket */, "/update.txt" /* path to local file */, mem_storage_type_flash /* memory storage type, mem_storage_type_flash and mem_storage_type_sd */, fcsDownloadCallback /* callback function */))
+    {
+      Serial.println(fbdo.errorReason());
+    }
+  }  
+}
+void setup_firebase(void)
+{
+  Serial.println();
+  Serial.printf("Firebase Client v%s\n\n", FIREBASE_CLIENT_VERSION);
+
+  /* Assign the api key (required) */
+  config.api_key = API_KEY;
+
+  /* Assign the user sign in credentials */
+  auth.user.email = USER_EMAIL;
+  auth.user.password = USER_PASSWORD;
+  /* Assign the callback function for the long running token generation task */
+  config.token_status_callback = tokenStatusCallback; // see addons/TokenHelper.h
+
+  // Comment or pass false value when WiFi reconnection will control by your code or third party library e.g. WiFiManager
+  Firebase.reconnectNetwork(true);
+
+  // Since v4.4.x, BearSSL engine was used, the SSL buffer need to be set.
+  // Large data transmission may require larger RX buffer, otherwise connection issue or data read time out can be occurred.
+  fbdo.setBSSLBufferSize(4096 /* Rx buffer size in bytes from 512 - 16384 */, 1024 /* Tx buffer size in bytes from 512 - 16384 */);
+
+  /* Assign download buffer size in byte */
+  // Data to be downloaded will read as multiple chunks with this size, to compromise between speed and memory used for buffering.
+  // The memory from external SRAM/PSRAM will not use in the TCP client internal rx buffer.
+  config.fcs.download_buffer_size = 2048;
+
+  Firebase.begin(&config, &auth);
+}
+void setup_wifi(void)
+{
+  Serial.println();
+  Serial.print("Connecting to");
+  Serial.println(WIFI_SSID);
+  WiFi.begin(WIFI_SSID,WIFI_PASSWORD);
+  while(WiFi.status()!=WL_CONNECTED)
+  {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("Wifi connected");
+  Serial.println("IP address");
+  Serial.println(WiFi.localIP());
+}
+/*******************Node red call back*******************************/
+int x;
+void callBack(char* topic,byte* payload,unsigned int length)/*typedef byte unsigned char*/
+{
+  String string;
+  Serial.print("Message arrived[");
+  Serial.print(topic);
+  Serial.print("]");
+  for(int i=0;i<length;i++)
+  {
+   string+=(char)payload[i];
+  }
+  /*topic=="/FOTA/test"*/
+  int ret=0;
+  ret=strcmp((char*)topic,"/FOTA/Boot");
+  if(ret==0) 
+  {
+    Serial.print("");
+    int status=string.toInt();
+    Serial.println(status);
+    if(status==0)/*The command for upload the application*/
+    {
+      if(x==1)/*We should press the button two times */
+      {
+        Read64Byte(packet);
+        Serial1.write("Bootloader End");
+      }
+      x++;
+
+    }
+    else if(status==50)/*The command for erasing the application*/
+    {
+      Serial1.write("Bootloader Erase");
+      packet[0]=74;
+      packet[1]=0x15;
+      #if 0
+      packet[2]=0x08;//The base address of the application
+      packet[3]=0x00;
+      packet[4]=0x29;
+      packet[5]=0x00;
+      #endif
+      *(int*)&packet[2]=0x08002900;//The base address of the application
+      packet[6]=64;  
+    } 
+  }
+  delay(15);
+}
+/*******************Firebase callback****************************/
+// The Firebase Storage download callback function
+void fcsDownloadCallback(FCS_DownloadStatusInfo info)
+{
+    if (info.status == firebase_fcs_download_status_init)
+    {
+        Serial.printf("Downloading file %s (%d) to %s\n", info.remoteFileName.c_str(), info.fileSize, info.localFileName.c_str());
+    }
+    else if (info.status == firebase_fcs_download_status_download)
+    {
+        Serial.printf("Downloaded %d%s, Elapsed time %d ms\n", (int)info.progress, "%", info.elapsedTime);
+    }
+    else if (info.status == firebase_fcs_download_status_complete)
+    {
+        Serial.println("Download completed\n");
+    }
+    else if (info.status == firebase_fcs_download_status_error)
+    {
+        Serial.printf("Download failed, %s\n", info.errorMsg.c_str());
+    }
+}
+void readFile(const char* path)
+{
+    //Serial.println("Reading File : %s\n",path);
+
+  File file=LittleFS.open(path,"r");
+  if(!file)
+  {
+    Serial.println("Failed to open file for reading");
+    return ;
+  }
+  Serial.println("Read from file:");
+  while(file.available())
+  {
+    uint8_t byte = file.read(); // Read a byte
+    Serial.write(byte); // Send the byte over serial
+    //Serial.write(file.read());
+  }
+  file.close();
+}
+/*********************Reconnect*****************************/
+void reconnect(void)
+{
+  while(!client.connected())
+  {
+    Serial.print("Attempting MQTT connection");
+    if(client.connect("espClient"))
+    {
+      Serial.println("connected");
+      client.subscribe("/FOTA/Boot");
+    }
+    else{
+      Serial.print("failed,rc=");
+      Serial.print(client.state());
+      Serial.print("try again in 5 seconds");
+      delay(5000);
+    }
+  }
+}
+/****************************Read data from the bootloader***********************************/
+void Read64Byte(char *Host)
+{
+  
+  char buf[2]={0};
+  File file=LittleFS.open("/update.txt","r");
+  while(file.available())
+  {
+    /*we will send 64 byte at a time*/
+    //delay(100);
+    packet[0]=70;
+    packet[1]=0x16;
+    *(int*)(&packet[2])=0x08002900;
+    packet[6]=64;
+    Serial1.write("Bootloader Start");
+    delay(100);
+    char counter_Byte=0;
+    while(counter_Byte<64)
+    {
+      file.readBytes(buf,2);/*Read two bytes from the buffer*/
+      //Serial.printf("%s",buf);
+      char Hex_data=strtol(buf,NULL,16);
+      packet[7+counter_Byte]=Hex_data;
+      Serial.printf("\npacket[%i]=%X",7+counter_Byte,packet[7+counter_Byte]);
+      counter_Byte++;
+    }
+    
+    for(uint8_t i=0;i<7;i++)
+    {
+    Serial1.write(packet[i]);
+    }
+    counter_Byte=0;
+    while(counter_Byte<64)
+    {
+      Serial1.write(packet[counter_Byte+7]);
+      counter_Byte++;
+    }
+    while(!Serial.available());
+    Serial.read();//to clear the buffer
+
+  }
+}
+
+
+
