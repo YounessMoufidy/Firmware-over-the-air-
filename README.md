@@ -13,13 +13,13 @@
 
 ## Test
 ### Proteuse schematic
-- For testing firmware over the air ,we have used CAN communication between two stm32,the stm that the its firmware has been updated,sends the temperature value via CAN to the other stm32 that displays it in OLED
+- For testing firmware over the air ,we have used CAN communication between two stm32,the stm that  its firmware has been updated,sends the temperature value via CAN to the other stm32 that displays it in an I2C OLED
   
  ![alt text](https://github.com/YounessMoufidy/Firmware-over-the-air-/blob/main/Proteuse%20schematic.jpeg)
 
 
 ### Problems
-Verify Wiring,
+Verify well the wiring between stm32 and esp8266.
 
 ## Contributing
 If you find a bug or have a feature request, please don't hesitate. Your Pull requests are  welcome.
