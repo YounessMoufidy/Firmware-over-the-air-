@@ -13,7 +13,7 @@
 
 ## Test
 ### Proteuse schematic
-- For testing firmware over the air ,we have used CAN communication between two stm32,the stm that  its firmware has been updated,sends the temperature value via CAN to the other stm32 that displays it in an I2C OLED
+- For testing firmware over the air ,we have used CAN communication between two stm32,the stm that  its firmware has been updated,sends the temperature value via CAN to the other stm32 that displays it in an I2C OLED(You can clone the repo "STM32_with_dht11")
   
  ![alt text](https://github.com/YounessMoufidy/Firmware-over-the-air-/blob/main/Proteuse%20schematic.jpeg)
 
