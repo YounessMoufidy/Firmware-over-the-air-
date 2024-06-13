@@ -23,17 +23,17 @@ Verify well the wiring between stm32 and esp8266.
 
 ## Project members
 
-### Saad Elmosadik:
+### Elmosadik Saad 
 https://www.linkedin.com/in/saad-el-mousadik-89057a228
-### Abdessamad Mobtakir:
 
+###  Mobtakir Abdessamad
 https://www.linkedin.com/in/abdessamad-moubtakir-331b3a217/
 
-### Brahim Outirza
+### Outirza Brahim 
 
 https://www.linkedin.com/in/brahim-outirza-9779572b0/
 
-### Mohamed Bahae OUAADDI
+### OUAADDI Mohamed Bahae 
 https://www.linkedin.com/in/mohamed-bahae-ouaaddi
 
 ### MOUFIDY Youness
