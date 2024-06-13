@@ -1,0 +1,9 @@
+../Core/Src/main.c:77:6:microDelay	2
+../Core/Src/main.c:83:9:DHT11_Start	5
+../Core/Src/main.c:114:9:DHT11_Read	7
+../Core/Src/main.c:147:5:main	4
+../Core/Src/main.c:226:6:SystemClock_Config	3
+../Core/Src/main.c:266:13:MX_CAN_Init	2
+../Core/Src/main.c:303:13:MX_TIM1_Init	4
+../Core/Src/main.c:349:13:MX_GPIO_Init	1
+../Core/Src/main.c:403:6:Error_Handler	1
