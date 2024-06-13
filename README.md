@@ -1,6 +1,7 @@
 # Firmware over the air
 
-![alt text](https://github.com/YounessMoufidy/PIC16F877A/blob/master/PIC_weather_station/PIC.png "PIC Weaher_station")
+## Project overview
+![alt text](https://github.com/YounessMoufidy/Firmware-over-the-air-/blob/main/Project%20general%20overview.png)
 
 
 
