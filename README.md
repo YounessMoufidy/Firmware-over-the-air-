@@ -34,7 +34,7 @@ Verify well the wiring between stm32 and esp8266.
 
 ## Project members
 
-### Elmosadik Saad 
+### EL MOUSADIK Saad
 https://www.linkedin.com/in/saad-el-mousadik-89057a228
 
 ###  Mobtakir Abdessamad
